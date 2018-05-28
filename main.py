@@ -35,13 +35,14 @@ FLAGS = flags.FLAGS
 def main(_):
     pp = pprint.PrettyPrinter()
     pp.pprint(flags.FLAGS.__flags)
-    
+
     # Train
+    '''
     all_train_paths = []
     for dirpath, dirnames, files in os.walk(FLAGS.train_data_dir):
         if os.path.basename(dirpath)[0:7] == 'Brats17':
             all_train_paths.append(dirpath)
-
+    '''
     if FLAGS.split_train:
         if os.path.exists(os.path.join(FLAGS.train_patch_dir, 'files.log')):
             with open(os.path.join(FLAGS.train_patch_dir, 'files.log'), 'r') as f:
@@ -59,6 +60,7 @@ def main(_):
         training_ids = [os.path.basename(i) for i in training_paths]
         testing_ids = [os.path.basename(i) for i in testing_paths]
 
+        '''
         training_survival_data = {}
         testing_survival_data = {}
         with open(FLAGS.train_csv, 'r') as csvfile:
@@ -71,11 +73,22 @@ def main(_):
 
         training_survival_paths = [p for p in all_train_paths if os.path.basename(p) in training_survival_data.keys()]
         testing_survival_paths = [p for p in all_train_paths if os.path.basename(p) in testing_survival_data.keys()]
+        '''
     else:
+        # train_patch_dir = data/ATLAS_R1.1/train/
+        '''
         training_paths = [os.path.join(FLAGS.train_patch_dir, name) for name in os.listdir(FLAGS.train_patch_dir)
                           if '.log' not in name]
+        '''
+        training_paths = []
+        for dirpath, dirnames, files in os.walk(FLAGS.train_patch_dir):
+            if os.path.basename(dirpath)[0:7] == 'patches':                      # WRONG???
+                training_paths.append(dirpath)
+
+        # training_paths contains ...../patches/
         testing_paths = None
 
+        '''
         training_ids = [os.path.basename(i) for i in training_paths]
         training_survival_paths = []
         testing_survival_paths = None
@@ -88,13 +101,15 @@ def main(_):
                 if row[0] in training_ids:
                     training_survival_data[row[0]] = (row[1], row[2])
         training_survival_paths = [p for p in all_train_paths if os.path.basename(p) in training_survival_data.keys()]
-        
+
+    '''
+
     if not os.path.exists(FLAGS.checkpoint_dir):
         os.makedirs(FLAGS.checkpoint_dir)
-    
+
     if not os.path.exists(FLAGS.log_dir):
         os.makedirs(FLAGS.log_dir)
-    
+
     # Segmentation net
     if FLAGS.run_seg:
         run_config = tf.ConfigProto()
@@ -119,12 +134,13 @@ def main(_):
                 unet.deploy(FLAGS.deploy_data_dir, FLAGS.deploy_output_dir)
 
         tf.reset_default_graph()
- 
+
+    '''
     # Survival net
     if FLAGS.run_survival:
         run_config = tf.ConfigProto()
         with tf.Session(config=run_config) as sess:
-            survivalvae = SurvivalVAE(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir, 
+            survivalvae = SurvivalVAE(sess, checkpoint_dir=FLAGS.checkpoint_dir, log_dir=FLAGS.log_dir,
                                       training_paths=training_survival_paths, testing_paths=testing_survival_paths,
                                       training_survival_data=training_survival_data,
                                       testing_survival_data=testing_survival_data)
@@ -150,6 +166,7 @@ def main(_):
                             deploy_survival_data[row[0]] = row[1]
                 deploy_survival_paths = [p for p in all_deploy_paths if os.path.basename(p) in deploy_survival_data.keys()]
                 survivalnet.deploy(FLAGS.deploy_survival_paths, FLAGS.deploy_survival_data)
-        
+    '''
+
 if __name__ == '__main__':
     tf.app.run()

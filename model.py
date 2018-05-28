@@ -17,7 +17,7 @@ def conv3d(input_, output_dim, f_size, is_training, scope='conv3d'):
         bn1 = tf.contrib.layers.batch_norm(conv1, is_training=is_training, scope='bn1', decay=0.9,
                                            zero_debias_moving_mean=True, variables_collections=['bn_collections'])
         r1 = tf.nn.relu(bn1)
-        
+
         w2 = tf.get_variable('w2', [f_size, f_size, f_size, output_dim, output_dim],
                              initializer=tf.truncated_normal_initializer(stddev=0.1))
         conv2 = tf.nn.conv3d(r1, w2, strides=[1, 1, 1, 1, 1], padding='SAME')
@@ -27,7 +27,7 @@ def conv3d(input_, output_dim, f_size, is_training, scope='conv3d'):
                                            zero_debias_moving_mean=True, variables_collections=['bn_collections'])
         r2 = tf.nn.relu(bn2)
         return r2
-    
+
 def deconv3d(input_, output_shape, f_size, is_training, scope='deconv3d'):
     with tf.variable_scope(scope) as scope:
         output_dim = output_shape[-1]
@@ -38,7 +38,7 @@ def deconv3d(input_, output_shape, f_size, is_training, scope='deconv3d'):
                                           zero_debias_moving_mean=True, variables_collections=['bn_collections'])
         r = tf.nn.relu(bn)
         return r
-    
+
 def crop_and_concat(x1, x2):
     x1_shape = x1.get_shape().as_list()
     x2_shape = x2.get_shape().as_list()
@@ -56,22 +56,22 @@ def conv_relu(input_, output_dim, f_size, s_size, scope='conv_relu'):
         conv = tf.nn.bias_add(conv, b)
         r = tf.nn.relu(conv)
         return r
-    
+
 class UNet3D(object):
     def __init__(self, sess, checkpoint_dir, log_dir, training_paths, testing_paths,
                  batch_size=1, layers=3, features_root=32, conv_size=3, dropout=0.5,
                  loss_type='cross_entropy', class_weights=None):
         self.sess = sess
-        
+
         self.checkpoint_dir = checkpoint_dir
         self.log_dir = log_dir
-        
+
         self.training_paths = training_paths
         self.testing_paths = testing_paths
-        
+
         image, _ = read_patch(os.path.join(self.training_paths[0], '0'))
-        
-        self.nclass = 4
+
+        self.nclass = 2
         self.batch_size = batch_size
         self.patch_size = image.shape[:-1]
         self.patch_stride = 4 # Used in deploy
@@ -83,11 +83,11 @@ class UNet3D(object):
         self.loss_type = loss_type
         self.class_weights = class_weights
         self.patches_per_image = len(os.listdir(self.training_paths[0]))
-        
+
         self.build_model()
-        
+
         self.saver = tf.train.Saver(tf.trainable_variables() + tf.get_collection_ref('bn_collections'))
-        
+
     def build_model(self):
         self.images = tf.placeholder(tf.float32, shape=[None, self.patch_size[0], self.patch_size[1], self.patch_size[2],
                                                         self.channel], name='images')
@@ -95,14 +95,14 @@ class UNet3D(object):
                                                         self.nclass], name='labels')
         self.is_training = tf.placeholder(tf.bool, name='is_training')
         self.keep_prob = tf.placeholder(tf.float32, name='dropout_ratio')
-        
+
         conv_size = self.conv_size
         layers = self.layers
 
         deconv_size = 2
         pool_stride_size = 2
         pool_kernel_size = 3 # Use a larger kernel
-        
+
         # Encoding path
         connection_outputs = []
         for layer in range(layers):
@@ -111,16 +111,16 @@ class UNet3D(object):
                 prev = self.images
             else:
                 prev = pool
-                
+
             conv = conv3d(prev, features, conv_size, is_training=self.is_training, scope='encoding' + str(layer))
             connection_outputs.append(conv)
             pool = tf.nn.max_pool3d(conv, ksize=[1, pool_kernel_size, pool_kernel_size, pool_kernel_size, 1],
                                     strides=[1, pool_stride_size, pool_stride_size, pool_stride_size, 1],
                                     padding='SAME')
-        
+
         bottom = conv3d(pool, 2**layers * self.features_root, conv_size, is_training=self.is_training, scope='bottom')
         bottom = tf.nn.dropout(bottom, self.keep_prob)
-        
+
         # Decoding path
         for layer in range(layers):
             conterpart_layer = layers - 1 - layer
@@ -129,7 +129,7 @@ class UNet3D(object):
                 prev = bottom
             else:
                 prev = conv_decoding
-            
+
             shape = prev.get_shape().as_list()
             deconv_output_shape = [tf.shape(prev)[0], shape[1] * deconv_size, shape[2] * deconv_size,
                                    shape[3] * deconv_size, features]
@@ -138,21 +138,21 @@ class UNet3D(object):
             cc = crop_and_concat(connection_outputs[conterpart_layer], deconv)
             conv_decoding = conv3d(cc, features, conv_size, is_training=self.is_training,
                                    scope='decoding' + str(conterpart_layer))
-            
+
         with tf.variable_scope('logits') as scope:
             w = tf.get_variable('w', [1, 1, 1, conv_decoding.get_shape()[-1], self.nclass],
                                 initializer=tf.truncated_normal_initializer(stddev=0.1))
             logits = tf.nn.conv3d(conv_decoding, w, strides=[1, 1, 1, 1, 1], padding='SAME')
             b = tf.get_variable('b', [self.nclass], initializer=tf.constant_initializer(0.0))
             logits = tf.nn.bias_add(logits, b)
-        
+
         self.probs = tf.nn.softmax(logits)
         self.predictions = tf.argmax(self.probs, 4)
         self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.predictions, tf.argmax(self.labels, 4)), tf.float32))
-                                  
+
         flat_logits = tf.reshape(logits, [-1, self.nclass])
         flat_labels = tf.reshape(self.labels, [-1, self.nclass])
-        
+
         if self.class_weights is not None:
             class_weights = tf.constant(np.asarray(self.class_weights, dtype=np.float32))
             weight_map = tf.reduce_max(tf.multiply(flat_labels, class_weights), axis=1)
@@ -177,46 +177,50 @@ class UNet3D(object):
         dice_value = dice_value * 2.0 / (self.nclass - 1)
         dice_loss = 1 - dice_loss * 2.0 / (self.nclass - 1)
         self.dice = dice_value
-        
+
         if self.loss_type == 'cross_entropy':
             self.loss = cross_entropy_loss
         elif self.loss_type == 'dice':
             self.loss = cross_entropy_loss + dice_loss
         else:
             raise ValueError("Unknown cost function: " + self.loss_type)
-        
+
         self.loss_summary = tf.summary.scalar('loss', self.loss)
         self.accuracy_summary = tf.summary.scalar('accuracy', self.accuracy)
         self.dice_summary = tf.summary.scalar('dice', self.dice)
-            
+
     def train(self, config):
         #optimizer = tf.train.AdamOptimizer().minimize(self.loss)
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             optimizer = tf.train.AdamOptimizer().minimize(self.loss)
-        
+
         self.sess.run(tf.global_variables_initializer())
-        
+
         train_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'train'), self.sess.graph)
         if self.testing_paths is not None:
             test_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'test'))
             testing_orders = [(n, l) for n in range(len(self.testing_paths)) for l in range(self.patches_per_image)]
-        
+
         merged = tf.summary.merge([self.loss_summary, self.accuracy_summary, self.dice_summary])
-                
+
         counter = 0
         training_orders = [(n, l) for n in range(len(self.training_paths)) for l in range(self.patches_per_image)]
         for epoch in range(config['epoch']):
             # Shuffle the orders
             epoch_training_orders = np.random.permutation(training_orders)
-            
+
             # Go through all selected patches
+            # f is in the range(number of batches that need to be run)
             for f in range(len(epoch_training_orders) // self.batch_size):
                 patches = np.empty((self.batch_size, self.patch_size[0], self.patch_size[1], self.patch_size[2], self.channel),
                                    dtype=np.float32)
                 labels = np.empty((self.batch_size, self.patch_size[0], self.patch_size[1], self.patch_size[2], self.nclass),
                                   dtype=np.float32)
+
+                # b is in the range(batch_size)
                 for b in range(self.batch_size):
+                    # order is in the range(len(training_orders))
                     order = epoch_training_orders[f * self.batch_size + b]
                     patches[b], labels[b] = read_patch(os.path.join(self.training_paths[order[0]], str(order[1])))
                 _, train_loss, summary = self.sess.run([optimizer, self.loss, merged],
@@ -228,7 +232,7 @@ class UNet3D(object):
                 counter += 1
                 if np.mod(counter, 1000) == 0:
                     self.save(counter)
-                    
+
                 # Run test
                 if self.testing_paths is not None and np.mod(counter, 100) == 0:
                     for b in range(self.batch_size):
@@ -241,22 +245,22 @@ class UNet3D(object):
                                                                      self.keep_prob: 1 })
                     print(str(counter) + ":" + "train_loss: " + str(train_loss) + " test_loss: " + str(test_loss))
                     test_writer.add_summary(summary, counter)
-                    
+
         # Save in the end
         self.save(counter)
-       
+
     def deploy(self, input_path, output_path):
         # Step 1
         if not self.load()[0]:
-            raise Exception("No model is found, please train first") 
-        
+            raise Exception("No model is found, please train first")
+
         # Apply this to all subjects including the training cases
         # Read from files.log and pick the testing cases for analysis
         all_paths = []
         for dirpath, dirnames, files in os.walk(input_path):
             if os.path.basename(dirpath)[0:7] == 'Brats17':
                 all_paths.append(dirpath)
-                
+
         for path in all_paths:
             image = read_image(path, is_training=False)
             locations, padding = generate_test_locations(self.patch_size, self.patch_stride, image.shape[:-1])
@@ -269,9 +273,9 @@ class UNet3D(object):
                         patch = pad_image[int(x - self.patch_size[0] / 2) : int(x + self.patch_size[0] / 2),
                                           int(y - self.patch_size[1] / 2) : int(y + self.patch_size[1] / 2),
                                           int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :]
-                        
+
                         patch = np.expand_dims(patch, axis=0)
-                        
+
                         probs = self.sess.run(self.probs, feed_dict = { self.images: patch,
                                                                         self.is_training: True,
                                                                         self.keep_prob: 1 })
@@ -287,11 +291,11 @@ class UNet3D(object):
                                 padding[2][0] : padding[2][0] + image.shape[2], :]
             print(path)
             np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
-            
+
     def estimate_mean_std(self, training_orders):
         means = []
         stds = []
-        # Strictly speaking, this is not the correct way to estimate std since the mean 
+        # Strictly speaking, this is not the correct way to estimate std since the mean
         # used in each image is not the global mean but the mean of the image, this would
         # cause an over-estimation of the std.
         # The correct way may need much more memory, and more importantly, it probably does not matter...
@@ -300,22 +304,22 @@ class UNet3D(object):
             means.append(np.mean(patch, axis=(0, 1, 2)))
             stds.append(np.std(patch, axis=(0, 1, 2)))
         return np.mean(np.asarray(means, dtype=np.float32), axis=0), np.mean(np.asarray(stds, dtype=np.float32), axis=0)
-    
+
     @property
     def model_dir(self):
         return 'unet3d_layer{}_{}'.format(self.layers, self.loss_type)
-    
+
     def save(self, step):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-            
+
         self.saver.save(self.sess, os.path.join(checkpoint_dir, 'unet3d'), global_step=step)
-        
+
     def load(self):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
@@ -326,40 +330,40 @@ class UNet3D(object):
             print("Failed to find a checkpoint")
             return False, 0
 
-# This model is not working...        
+# This model is not working...
 class SurvivalNet(object):
     def __init__(self, sess, checkpoint_dir, log_dir, training_paths, testing_paths,
                  training_survival_data, testing_survival_data,
                  batch_size=1, features=16, dropout=0.5):
         self.sess = sess
-        
+
         self.checkpoint_dir = checkpoint_dir
         self.log_dir = log_dir
-        
+
         self.training_paths = training_paths
         self.testing_paths = testing_paths
         self.training_survival_data = training_survival_data
         self.testing_survival_data = testing_survival_data
-        
+
         label = read_label(self.training_paths[0])
-        
+
         self.label_size = label.shape[:-1]
         self.batch_size = batch_size
         self.channel = label.shape[-1]
         self.features = features
         self.dropout = dropout
-        
+
         self.build_model()
-        
+
         self.saver = tf.train.Saver()
-    
+
     def build_model(self):
         self.labels = tf.placeholder(tf.float32, shape=[None, self.label_size[0], self.label_size[1], self.label_size[2],
                                                         self.channel], name='images')
         self.survival = tf.placeholder(tf.float32, shape=[None, 1], name='survival')
         self.age = tf.placeholder(tf.float32, shape=[None, 1], name='age')
         self.keep_prob = tf.placeholder(tf.float32, name='dropout_ratio')
-        
+
         # variational autoencoders
         # 3 layers
         # 16*16*16->4*4*4->1*1*1
@@ -375,24 +379,24 @@ class SurvivalNet(object):
         flat_image_input = tf.reshape(conv_relu_output, [-1, self.features])
         all_input = tf.concat([flat_image_input, self.age], 1)
         output = tf.layers.dense(all_input, 1)
-        
+
         self.loss = tf.losses.mean_squared_error(self.survival, output)
         self.loss_summary = tf.summary.scalar('loss', self.loss)
-            
+
     def train(self, config):
         optimizer = tf.train.AdamOptimizer().minimize(self.loss)
-        
+
         self.sess.run(tf.global_variables_initializer())
-        
+
         train_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'train'), self.sess.graph)
         if self.testing_paths is not None:
             test_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'test'))
-         
+
         counter = 0
         for epoch in range(config['epoch']):
             # Shuffle the orders
             training_paths = np.random.permutation(self.training_paths)
-            
+
             # Go through all selected patches
             for f in range(len(training_paths) // self.batch_size):
                 labels = np.empty((self.batch_size, self.label_size[0], self.label_size[1], self.label_size[2], self.channel),
@@ -412,7 +416,7 @@ class SurvivalNet(object):
                 counter += 1
                 if np.mod(counter, 1000) == 0:
                     self.save(counter)
-                    
+
                 # Run test
                 if self.testing_paths is not None and np.mod(counter, 100) == 0:
                     testing_paths = np.random.permutation(self.testing_paths)
@@ -427,22 +431,22 @@ class SurvivalNet(object):
                                                                      self.keep_prob: 1 })
                     print(str(counter) + ":" + "train_loss: " + str(train_loss) + " test_loss: " + str(test_loss))
                     test_writer.add_summary(summary, counter)
-                    
+
         # Save in the end
         self.save(counter)
-       
+
     def deploy(self, input_path, output_path):
         # Step 1
         if not self.load()[0]:
-            raise Exception("No model is found, please train first") 
-        
+            raise Exception("No model is found, please train first")
+
         # Apply this to all subjects including the training cases
         # Read from files.log and pick the testing cases for analysis
         all_paths = []
         for dirpath, dirnames, files in os.walk(input_path):
             if os.path.basename(dirpath)[0:7] == 'Brats17':
                 all_paths.append(dirpath)
-                
+
         #mean, std = self.sess.run([self.mean, self.std])
         for path in all_paths:
             image = read_image(path, is_training=False)
@@ -456,10 +460,10 @@ class SurvivalNet(object):
                         patch = pad_image[int(x - self.patch_size[0] / 2) : int(x + self.patch_size[0] / 2),
                                           int(y - self.patch_size[1] / 2) : int(y + self.patch_size[1] / 2),
                                           int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :]
-                        
+
                         patch = np.expand_dims(patch, axis=0)
                         #patch = (patch - mean) / std
-                        
+
                         probs = self.sess.run(self.probs, feed_dict = { self.images: patch,
                                                                         self.is_training: True,
                                                                         self.keep_prob: 1 })
@@ -475,11 +479,11 @@ class SurvivalNet(object):
                                 padding[2][0] : padding[2][0] + image.shape[2], :]
             print(path)
             np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
-            
+
     def estimate_mean_std(self, training_orders):
         means = []
         stds = []
-        # Strictly speaking, this is not the correct way to estimate std since the mean 
+        # Strictly speaking, this is not the correct way to estimate std since the mean
         # used in each image is not the global mean but the mean of the image, this would
         # cause an over-estimation of the std.
         # The correct way may need much more memory, and more importantly, it probably does not matter...
@@ -488,22 +492,22 @@ class SurvivalNet(object):
             means.append(np.mean(patch, axis=(0, 1, 2)))
             stds.append(np.std(patch, axis=(0, 1, 2)))
         return np.mean(np.asarray(means, dtype=np.float32), axis=0), np.mean(np.asarray(stds, dtype=np.float32), axis=0)
-    
+
     @property
     def model_dir(self):
         return 'survival_feature{}'.format(self.features)
-    
+
     def save(self, step):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-            
+
         self.saver.save(self.sess, os.path.join(checkpoint_dir, 'survivalnet'), global_step=step)
-        
+
     def load(self):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
@@ -513,23 +517,23 @@ class SurvivalNet(object):
         else:
             print("Failed to find a checkpoint")
             return False, 0
-        
+
 class SurvivalVAE(object):
     def __init__(self, sess, checkpoint_dir, log_dir, training_paths, testing_paths,
                  training_survival_data, testing_survival_data,
                  batch_size=6, n_hidden_1=500, n_hidden_2=500, n_z=20):
         self.sess = sess
-        
+
         self.checkpoint_dir = checkpoint_dir
         self.log_dir = log_dir
-        
+
         self.training_paths = training_paths
         self.testing_paths = testing_paths
         self.training_survival_data = training_survival_data
         self.testing_survival_data = testing_survival_data
-        
+
         label = read_label(self.training_paths[0])
-        
+
         self.label_size = label.shape[:-1]
         self.channel = label.shape[-1]
         self.n_input = label.size
@@ -537,17 +541,17 @@ class SurvivalVAE(object):
         self.n_hidden_1 = n_hidden_1
         self.n_hidden_2 = n_hidden_2
         self.n_z = n_z
-        
+
         self.build_model()
-        
+
         self.saver = tf.train.Saver()
-    
+
     def build_model(self):
         self.labels = tf.placeholder(tf.float32, shape=[None, self.label_size[0], self.label_size[1], self.label_size[2],
                                                         self.channel], name='images')
         self.survival = tf.placeholder(tf.float32, shape=[None, 1], name='survival')
         self.age = tf.placeholder(tf.float32, shape=[None, 1], name='age')
-        
+
         # variational autoencoders
         self.input = tf.reshape(self.labels, [-1, self.n_input])
         with tf.variable_scope('enc') as scope:
@@ -567,10 +571,10 @@ class SurvivalVAE(object):
                                     initializer=tf.truncated_normal_initializer(stddev=0.1))
             bsigma = tf.get_variable('bsigma', [self.n_z], initializer=tf.constant_initializer(0.0))
             self.z_log_sigma_sq = tf.add(tf.matmul(layer_2, hsigma), bsigma)
-        
+
         eps = tf.random_normal((self.batch_size, self.n_z), 0, 1, dtype=tf.float32)
         self.z = tf.add(self.z_mean, tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
-        
+
         with tf.variable_scope('dec') as scope:
             h2 = tf.get_variable('h2', [self.n_z, self.n_hidden_2],
                                  initializer=tf.truncated_normal_initializer(stddev=0.1))
@@ -584,28 +588,28 @@ class SurvivalVAE(object):
                                     initializer=tf.truncated_normal_initializer(stddev=0.1))
             bmean = tf.get_variable('bmean', [self.n_input], initializer=tf.constant_initializer(0.0))
             self.x_recon = tf.nn.sigmoid(tf.clip_by_value(tf.add(tf.matmul(layer_1, hmean), bmean), -30, 30))
-            
+
         self.recon_loss = -tf.reduce_sum(self.input * tf.log(1e-10 + self.x_recon)
                                          + (1 - self.input) * tf.log(1e-10 + 1 - self.x_recon), 1)
         self.latent_loss = -0.5 * tf.reduce_sum(1 + self.z_log_sigma_sq - tf.square(self.z_mean)
                                                 - tf.exp(self.z_log_sigma_sq), 1)
         self.loss = tf.reduce_sum(self.recon_loss + self.latent_loss)
         self.loss_summary = tf.summary.scalar('loss', self.loss)
-            
+
     def train(self, config):
         optimizer = tf.train.AdamOptimizer().minimize(self.loss)
-        
+
         self.sess.run(tf.global_variables_initializer())
-        
+
         train_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'train'), self.sess.graph)
         if self.testing_paths is not None:
             test_writer = tf.summary.FileWriter(os.path.join(self.log_dir, self.model_dir, 'test'))
-         
+
         counter = 0
         for epoch in range(config['epoch']):
             # Shuffle the orders
             training_paths = np.random.permutation(self.training_paths)
-            
+
             # Go through all selected patches
             for f in range(len(training_paths) // self.batch_size):
                 labels = np.empty((self.batch_size, self.label_size[0], self.label_size[1], self.label_size[2], self.channel),
@@ -624,7 +628,7 @@ class SurvivalVAE(object):
                 counter += 1
                 if np.mod(counter, 1000) == 0:
                     self.save(counter)
-                    
+
                 # Run test
                 if self.testing_paths is not None and np.mod(counter, 100) == 0:
                     testing_paths = np.random.permutation(self.testing_paths)
@@ -638,28 +642,28 @@ class SurvivalVAE(object):
                                                                      self.age: ages })
                     print(str(counter) + ":" + "train_loss: " + str(train_loss) + " test_loss: " + str(test_loss))
                     test_writer.add_summary(summary, counter)
-                    
+
         # Save in the end
         self.save(counter)
-       
+
     def deploy(self, input_path, output_path):
         print('deploy')
-    
+
     @property
     def model_dir(self):
         return 'survival_vae'
-    
+
     def save(self, step):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-            
+
         self.saver.save(self.sess, os.path.join(checkpoint_dir, 'survivalnet'), global_step=step)
-        
+
     def load(self):
         checkpoint_dir = os.path.join(self.checkpoint_dir, self.model_dir)
-        
+
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
