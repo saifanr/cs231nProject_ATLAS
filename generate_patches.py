@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # Some variables
     patches_per_image = 400
     patch_size = 32
-    image_size = (232, 196, 188)
+    image_size = (197, 233, 189)
 
     all_paths = []
     for dirpath, dirnames, files in os.walk(input_path):
