@@ -210,7 +210,6 @@ class UNet3D(object):
             # Shuffle the orders
             epoch_training_orders = np.random.permutation(training_orders)
 
-            count = 0
             # Go through all selected patches
             # f is in the range(number of batches that need to be run)
             for f in range(len(epoch_training_orders) // self.batch_size):
@@ -223,18 +222,13 @@ class UNet3D(object):
                 for b in range(self.batch_size):
                     # order is in the range(len(training_orders))
                     order = epoch_training_orders[f * self.batch_size + b]
-                    print( 'path: ', os.path.join(self.training_paths[order[0]], str(order[1])) )
                     patches[b], labels[b] = read_patch(os.path.join(self.training_paths[order[0]], str(order[1])))
 
-                count = count + 1
-                print( '____iteration: ', count )
-                print( 'image shape: ', patches.shape, '    label shape: ', labels.shape)
                 _, train_loss, summary = self.sess.run([optimizer, self.loss, merged],
                                                        feed_dict = { self.images: patches,
                                                                      self.labels: labels,
                                                                      self.is_training: True,
                                                                      self.keep_prob: self.dropout })
-                print( '____train loss: ', train_loss )
                 train_writer.add_summary(summary, counter)
                 counter += 1
                 if np.mod(counter, 1000) == 0:
