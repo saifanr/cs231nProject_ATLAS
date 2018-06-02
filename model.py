@@ -451,7 +451,7 @@ class SurvivalNet(object):
         # Read from files.log and pick the testing cases for analysis
         all_paths = []
         for dirpath, dirnames, files in os.walk(input_path):
-            if os.path.basename(dirpath)[0:7] == 'Brats17':
+            if os.path.basename(dirpath)[0:3] == 't01':
                 all_paths.append(dirpath)
 
         #mean, std = self.sess.run([self.mean, self.std])
