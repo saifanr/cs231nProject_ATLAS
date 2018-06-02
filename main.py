@@ -11,7 +11,7 @@ from model import UNet3D, SurvivalVAE
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 4, "Epoch to train [4]")
-flags.DEFINE_string("train_patch_dir", "patches", "Directory of the training data [patches]")
+flags.DEFINE_string("train_patch_dir", "../small_data", "Directory of the training data [patches]")
 flags.DEFINE_bool("split_train", False, "Whether to split the train data into train and val [False]")
 flags.DEFINE_string("train_data_dir", "../BraTS17TrainingData", "Directory of the train data [../BraTS17TrainingData]")
 flags.DEFINE_string("deploy_data_dir", "../BraTS17ValidationData", "Directory of the test data [../BraTS17ValidationData]")

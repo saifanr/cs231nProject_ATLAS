@@ -263,9 +263,12 @@ class UNet3D(object):
 
         # Apply this to all subjects including the training cases
         # Read from files.log and pick the testing cases for analysis
+        print('***********************************************************')
+        print( input_path )
         all_paths = []
         for dirpath, dirnames, files in os.walk(input_path):
-            if os.path.basename(dirpath)[0:7] == 'Brats17':
+            print( dirpath )
+            if os.path.basename(dirpath)[0:3] == 't01':
                 all_paths.append(dirpath)
 
         for path in all_paths:
