@@ -86,7 +86,7 @@ def main(_):
                 training_paths.append(dirpath)
 
         # training_paths contains ...../patches/
-        testing_paths = None
+        testing_paths = training_paths
 
         '''
         training_ids = [os.path.basename(i) for i in training_paths]

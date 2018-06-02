@@ -103,7 +103,7 @@ def read_patch(path):
     seg = image[..., -1]
     label = np.zeros((image.shape[0], image.shape[1], image.shape[2], 2), dtype=np.float32)
     label[seg == 0, 0] = 1
-    label[seg == 1, 1] = 1
+    label[seg > 0, 1] = 1 #changed
     return image[..., :-1], label
 
 def generate_patch_locations(patches, patch_size, im_size):

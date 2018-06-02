@@ -227,14 +227,14 @@ class UNet3D(object):
                     patches[b], labels[b] = read_patch(os.path.join(self.training_paths[order[0]], str(order[1])))
 
                 count = count + 1
-                print( 'iteration: ', count )
+                print( '____iteration: ', count )
                 print( 'image shape: ', patches.shape, '    label shape: ', labels.shape)
                 _, train_loss, summary = self.sess.run([optimizer, self.loss, merged],
                                                        feed_dict = { self.images: patches,
                                                                      self.labels: labels,
                                                                      self.is_training: True,
                                                                      self.keep_prob: self.dropout })
-                print( 'train loss: ', train_loss )
+                print( '____train loss: ', train_loss )
                 train_writer.add_summary(summary, counter)
                 counter += 1
                 if np.mod(counter, 1000) == 0:
