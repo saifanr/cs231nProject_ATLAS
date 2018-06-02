@@ -263,11 +263,9 @@ class UNet3D(object):
 
         # Apply this to all subjects including the training cases
         # Read from files.log and pick the testing cases for analysis
-        print('***********************************************************')
         print( input_path )
         all_paths = []
         for dirpath, dirnames, files in os.walk(input_path):
-            print( dirpath )
             if os.path.basename(dirpath)[0:3] == 't01':
                 all_paths.append(dirpath)
 
@@ -299,6 +297,7 @@ class UNet3D(object):
             result = pad_result[padding[0][0] : padding[0][0] + image.shape[0],
                                 padding[1][0] : padding[1][0] + image.shape[1],
                                 padding[2][0] : padding[2][0] + image.shape[2], :]
+            print( result.shape )
             print(path)
             np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
 
