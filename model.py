@@ -302,7 +302,7 @@ class UNet3D(object):
             print( 'result shape', result.shape )
             print( path )
             print( 'i am saving here:')
-            print( os.path.join(output_path, os.path.basename(path) + '_probs' )
+            print( os.path.join(output_path, os.path.basename(path) + '_probs' ) )
 
             np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
 
