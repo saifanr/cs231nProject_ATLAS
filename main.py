@@ -7,7 +7,7 @@ import tensorflow.contrib.slim as slim
 import pickle, csv
 
 from utils import *
-from model import UNet3D, SurvivalVAE
+from model import UNet3D
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 4, "Epoch to train [4]")
