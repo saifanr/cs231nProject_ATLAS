@@ -73,9 +73,9 @@ class UNet3D(object):
 
         self.nclass = 2
         self.batch_size = batch_size
-        self.patch_size = image.shape[:-1]
+        self.patch_size = image.shape[:-1] # (32,32,32)
         self.patch_stride = 4 # Used in deploy
-        self.channel = image.shape[-1]
+        self.channel = image.shape[-1] # 2
         self.layers = layers
         self.features_root = features_root
         self.conv_size = conv_size
@@ -264,23 +264,32 @@ class UNet3D(object):
                 all_paths.append(dirpath)
 
         for path in all_paths:
-            image = read_image(path, is_training=False)
+            image = read_image(path, is_training=False) # image.shape = (197,233,189,1)
             locations, padding = generate_test_locations(self.patch_size, self.patch_stride, image.shape[:-1])
-            pad_image = np.pad(image, padding + ((0, 0),), 'constant')
-            pad_result = np.zeros((pad_image.shape[:-1] + (self.nclass,)), dtype=np.float32)
-            pad_add = np.zeros((pad_image.shape[:-1]), dtype=np.float32)
+            pad_image = np.pad(image, padding + ((0, 0),), 'constant') # pad_image.shape = (232,272,224,1)
+            pad_result = np.zeros((pad_image.shape[:-1] + (self.nclass,)), dtype=np.float32) # pad_result.shape=(232,272,224,2)
+            pad_add = np.zeros((pad_image.shape[:-1]), dtype=np.float32) # pad_add.shape=(232,272,224,2)
+
+            our_counter = 0
+
             for x in locations[0]:
                 for y in locations[1]:
                     for z in locations[2]:
                         patch = pad_image[int(x - self.patch_size[0] / 2) : int(x + self.patch_size[0] / 2),
                                           int(y - self.patch_size[1] / 2) : int(y + self.patch_size[1] / 2),
-                                          int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :]
+                                          int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :] # patch.shape = (32,32,32,1)
 
-                        patch = np.expand_dims(patch, axis=0)
+                        patch = np.expand_dims(patch, axis=0) # patch.shape = (1,32,32,32,1)
+
+                        our_counter = our_counter + 1
+                        print( our_counter, '\t', patch.shape )
 
                         probs = self.sess.run(self.probs, feed_dict = { self.images: patch,
                                                                         self.is_training: True,
                                                                         self.keep_prob: 1 })
+
+                        print( 'I am out! Deal with it! Achi baat hai! Yaay' )
+                        
                         pad_result[int(x - self.patch_size[0] / 2) : int(x + self.patch_size[0] / 2),
                                    int(y - self.patch_size[1] / 2) : int(y + self.patch_size[1] / 2),
                                    int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :] += probs[0]
@@ -333,6 +342,7 @@ class UNet3D(object):
             print("Failed to find a checkpoint")
             return False, 0
 
+'''
 # This model is not working...
 class SurvivalNet(object):
     def __init__(self, sess, checkpoint_dir, log_dir, training_paths, testing_paths,
@@ -450,7 +460,7 @@ class SurvivalNet(object):
             if os.path.basename(dirpath)[0:3] == 't01':
                 all_paths.append(dirpath)
 
-        #mean, std = self.sess.run([self.mean, self.std])
+        # mean, std = self.sess.run([self.mean, self.std])
         for path in all_paths:
             image = read_image(path, is_training=False)
             locations, padding = generate_test_locations(self.patch_size, self.patch_stride, image.shape[:-1])
@@ -520,7 +530,9 @@ class SurvivalNet(object):
         else:
             print("Failed to find a checkpoint")
             return False, 0
+'''
 
+'''
 class SurvivalVAE(object):
     def __init__(self, sess, checkpoint_dir, log_dir, training_paths, testing_paths,
                  training_survival_data, testing_survival_data,
@@ -676,3 +688,4 @@ class SurvivalVAE(object):
         else:
             print("Failed to find a checkpoint")
             return False, 0
+'''
