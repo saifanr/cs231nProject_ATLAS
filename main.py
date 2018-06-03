@@ -14,6 +14,7 @@ flags.DEFINE_integer("epoch", 4, "Epoch to train [4]")
 flags.DEFINE_string("train_patch_dir", "../small_data", "Directory of the training data [patches]")
 flags.DEFINE_bool("split_train", False, "Whether to split the train data into train and val [False]")
 flags.DEFINE_string("train_data_dir", "../BraTS17TrainingData", "Directory of the train data [../BraTS17TrainingData]")
+flags.DEFINE_string("testing_data_dir", None, "Directory of the testing data [../BraTS17TrainingData]")
 flags.DEFINE_string("deploy_data_dir", "../BraTS17ValidationData", "Directory of the test data [../BraTS17ValidationData]")
 flags.DEFINE_string("deploy_output_dir", "output_validation", "Directory name of the output data [output]")
 flags.DEFINE_string("train_csv", "../BraTS17TrainingData/survival_data.csv", "CSV path of the training data")
@@ -82,11 +83,14 @@ def main(_):
         '''
         training_paths = []
         for dirpath, dirnames, files in os.walk(FLAGS.train_patch_dir):
-            if os.path.basename(dirpath)[0:7] == 'patches':                      # WRONG???
+            if os.path.basename(dirpath)[0:7] == 'patches':
                 training_paths.append(dirpath)
 
         # training_paths contains ...../patches/
-        testing_paths = training_paths
+        testing_paths = []
+        for dirpath, dirnames, files in os.walk(FLAGS.testing_data_dir):
+            if os.path.basename(dirpath)[0:7] == 'patches':
+                training_paths.append(dirpath)
 
         '''
         training_ids = [os.path.basename(i) for i in training_paths]
