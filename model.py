@@ -265,7 +265,7 @@ class UNet3D(object):
 
         for path in all_paths:
             image = read_image(path, is_training=False) # image.shape = (197,233,189,1)
-            locations, padding = generate_test_locations(self.patch_size, self.patch_stride, image.shape[:-1])
+            locations, padding = generate_test_locations(self.patch_size, self.patch_stride, image.shape[:-1]) # len(locations[0]) = 26, len(locations[1]) = 31, len(locations[2]) = 25,
             pad_image = np.pad(image, padding + ((0, 0),), 'constant') # pad_image.shape = (232,272,224,1)
             pad_result = np.zeros((pad_image.shape[:-1] + (self.nclass,)), dtype=np.float32) # pad_result.shape=(232,272,224,2)
             pad_add = np.zeros((pad_image.shape[:-1]), dtype=np.float32) # pad_add.shape=(232,272,224,2)
@@ -288,8 +288,6 @@ class UNet3D(object):
                                                                         self.is_training: True,
                                                                         self.keep_prob: 1 })
 
-                        print( 'I am out! Deal with it! Achi baat hai! Yaay' )
-                        
                         pad_result[int(x - self.patch_size[0] / 2) : int(x + self.patch_size[0] / 2),
                                    int(y - self.patch_size[1] / 2) : int(y + self.patch_size[1] / 2),
                                    int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :] += probs[0]
@@ -300,8 +298,12 @@ class UNet3D(object):
             result = pad_result[padding[0][0] : padding[0][0] + image.shape[0],
                                 padding[1][0] : padding[1][0] + image.shape[1],
                                 padding[2][0] : padding[2][0] + image.shape[2], :]
-            print( result.shape )
-            print(path)
+
+            print( 'result shape', result.shape )
+            print( path )
+            print( 'i am saving here:')
+            print( os.path.join(output_path, os.path.basename(path) + '_probs' )
+
             np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
 
     def estimate_mean_std(self, training_orders):
