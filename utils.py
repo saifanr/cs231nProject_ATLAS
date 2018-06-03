@@ -94,7 +94,7 @@ def read_image(path, is_training=True):
     image[..., 0] = normalize(t1)
 
     if is_training:
-        image[..., 1] = seg[seg>0.5].astype(np.float32)
+        image[..., 1] = seg
 
     return image
 
