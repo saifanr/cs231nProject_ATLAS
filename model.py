@@ -270,8 +270,6 @@ class UNet3D(object):
             pad_result = np.zeros((pad_image.shape[:-1] + (self.nclass,)), dtype=np.float32) # pad_result.shape=(232,272,224,2)
             pad_add = np.zeros((pad_image.shape[:-1]), dtype=np.float32) # pad_add.shape=(232,272,224,2)
 
-            our_counter = 0
-
             for x in locations[0]:
                 for y in locations[1]:
                     for z in locations[2]:
@@ -280,9 +278,6 @@ class UNet3D(object):
                                           int(z - self.patch_size[2] / 2) : int(z + self.patch_size[2] / 2), :] # patch.shape = (32,32,32,1)
 
                         patch = np.expand_dims(patch, axis=0) # patch.shape = (1,32,32,32,1)
-
-                        our_counter = our_counter + 1
-                        print( our_counter, '\t', patch.shape )
 
                         probs = self.sess.run(self.probs, feed_dict = { self.images: patch,
                                                                         self.is_training: True,
