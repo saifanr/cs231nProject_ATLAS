@@ -90,7 +90,7 @@ def main(_):
         testing_paths = []
         for dirpath, dirnames, files in os.walk(FLAGS.testing_data_dir):
             if os.path.basename(dirpath)[0:7] == 'patches':
-                training_paths.append(dirpath)
+                testing_paths.append(dirpath)
 
         '''
         training_ids = [os.path.basename(i) for i in training_paths]
