@@ -133,9 +133,7 @@ def main(_):
                 unet.train(train_config)
             else:
                 # Deploy
-                if not os.path.exists(FLAGS.deploy_output_dir):
-                    os.makedirs(FLAGS.deploy_output_dir)
-                unet.deploy(FLAGS.deploy_data_dir, FLAGS.deploy_output_dir)
+                unet.deploy(FLAGS.deploy_data_dir)
 
         tf.reset_default_graph()
 

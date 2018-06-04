@@ -250,7 +250,7 @@ class UNet3D(object):
         # Save in the end
         self.save(counter)
 
-    def deploy(self, input_path, output_path):
+    def deploy(self, input_path):
         # Step 1
         if not self.load()[0]:
             raise Exception("No model is found, please train first")
@@ -296,9 +296,9 @@ class UNet3D(object):
             print( 'result shape', result.shape )
             print( path )
             print( 'i am saving here:')
-            print( os.path.join(output_path, os.path.basename(path) + '_probs' ) )
+            print( os.path.join(path, 'probs' ) )
 
-            np.save(os.path.join(output_path, os.path.basename(path) + '_probs'), result)
+            np.save(os.path.join(path, 'probs'), result)
 
     def estimate_mean_std(self, training_orders):
         means = []
