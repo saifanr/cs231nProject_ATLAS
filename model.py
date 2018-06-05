@@ -296,9 +296,12 @@ class UNet3D(object):
             print( 'result shape', result.shape )
             print( path )
             print( 'i am saving here:')
-            print( os.path.join(path, 'probs' ) )
+            print( os.path.join(path, 'probs') )
 
             np.save(os.path.join(path, 'probs'), result)
+
+            pred = np.argmax(result, 3).astype(np.float32)
+            np.save(os.path.join(path, 'preds'), pred)
 
     def estimate_mean_std(self, training_orders):
         means = []
