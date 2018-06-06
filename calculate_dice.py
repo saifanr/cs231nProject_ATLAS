@@ -17,7 +17,7 @@ if __name__ == '__main__':
     dices = []
 
     for path in all_paths:
-        pred = np.load(os.path.join(path, 'preds.npy'))
+        pred = np.load(os.path.join(path, 'preds_processed.npy'))
         truth = read_image( path )[...,1]
 
         pred[pred>0.5] = 1
@@ -33,9 +33,9 @@ if __name__ == '__main__':
 
         dices.append( dice )
 
-        print( str(path) + '\t' +  str(dice) + '\n' )
-        f.write( str(path) + '\t' +  str(dice) + '\n' )
+        print( str(path) + '\t' +  str(dice) )
+        f.write( str(path) + '\t' +  str(dice) +'\n' )
 
-    print( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() ) + '\n' )
+    print( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() ) )
     f.write( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() )+ '\n' )
     f.close()
