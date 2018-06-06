@@ -27,15 +27,15 @@ if __name__ == '__main__':
             raise ValueError("Shape mismatch: pred and truth must have the same shape.")
 
         # Compute Dice coefficient
-        intersection = np.logical_and(im1, im2)
+        intersection = np.logical_and(pred, truth)
 
-        dice = 2.0 * intersection.sum() / (im1.sum() + im2.sum())
+        dice = 2.0 * intersection.sum() / (pred.sum() + truth.sum())
 
         dices.append( dice )
 
         print( str(path) + '\t' +  str(dice) + '\n' )
         f.write( str(path) + '\t' +  str(dice) + '\n' )
 
-    print( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() + '\n' ) )
-    f.write( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() + '\n' ) )
+    print( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() ) + '\n' )
+    f.write( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() )+ '\n' )
     f.close()
