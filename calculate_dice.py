@@ -7,7 +7,7 @@ if __name__ == '__main__':
         raise Exception("Need at least the input directory")
     input_dir = sys.argv[1]
 
-    f = open(os.path.join( input_path, 'dice_scores.txt' ), 'w')
+    f = open(os.path.join( input_dir, 'dice_scores.txt' ), 'w')
 
     all_paths = []
     for dirpath, dirnames, files in os.walk(input_dir):
@@ -17,8 +17,8 @@ if __name__ == '__main__':
     dices = []
 
     for path in all_paths:
-        pred = np.load(os.path.join(input_path, 'preds.npy'))
-        truth = read_image( input_path )[...,1]
+        pred = np.load(os.path.join(path, 'preds.npy'))
+        truth = read_image( path )[...,1]
 
         pred[pred>0.5] = 1
         truth[truth>0.5] = 1
