@@ -44,7 +44,7 @@ def patch_viewer(patch):
     ax_img.index = ax_img.volume.shape[1] // 2
     ax_seg.index = ax_seg.volume.shape[1] // 2
     ax_img.imshow(ax_img.volume[:,ax_img.index,:], cmap='gray')
-    ax_seg.imshow(ax_seg.volume[:,ax_seg.index,:], cmap='gray')
+    ax_seg.imshow(ax_seg.volume[:,ax_seg.index,:], cmap='gray', norm=clr.NoNorm())
     fig.canvas.mpl_connect('key_press_event', process_key)
     plt.show()
 
@@ -71,27 +71,32 @@ def next_slice(ax):
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:
-        raise Exception("Need the patch directory")
+        raise Exception("Need the keyword 'patch' or 'full'")
 
-    # patch_path = sys.argv[1]
+    if len(sys.argv) < 3:
+        if sys.argv[1] == "patch":
+            raise Exception("Need the path to the patch file")
+        else if sys.argv[1] == "full":
+            raise Exception("Need the path to the directory containing images")
 
-    # patch = np.load( patch_path )
-    image_path = sys.argv[1]
-    pred_path = sys.argv[2]
+    if sys.argv[1] == "patch":
+        patch_path = sys.argv[2]
+        patch = np.load( patch_path ).astype(np.float32)
+        patch[...,1][patch[...,1]>0.5] = 0.9
+        patch_viewer( patch )
 
-    image = read_image( image_path )
+    else if sys.argv[1] == "full":
+        image_path = sys.argv[1]
+        pred_path = os.path.join( image_path, 'preds_processed.npy')
 
-    img = image[...,0]
-    seg = image[...,1]
+        image = read_image( image_path )
 
-    pred = np.load( pred_path ).astype(np.float32)
+        img = image[...,0]
+        seg = image[...,1]
 
-    pred[pred>0.5] = 0.9
-    seg[seg>0.5] = 0.9
+        pred = np.load( pred_path ).astype(np.float32)
 
-    full_multi_viewer(img, seg, pred)
+        pred[pred>0.5] = 0.9
+        seg[seg>0.5] = 0.9
 
-    # else:
-    #    img = np.load( FLAGS.patch_path )[:,:,:,1]
-
-    # patch_viewer( patch )
+        full_multi_viewer(img, seg, pred)
