@@ -31,8 +31,11 @@ def full_multi_viewer(img, seg_mask, prediction):
     ax_seg.index = ax_seg.volume.shape[1] // 2
     ax_pre.index = ax_pre.volume.shape[1] // 2
     ax_img.imshow(ax_img.volume[:,ax_img.index,:], cmap='gray')
+    ax_img.set_title('MRI Scan')
     ax_seg.imshow(ax_seg.volume[:,ax_seg.index,:], cmap='gray', norm=clr.NoNorm())
+    ax_seg.set_title('Ground Truth')
     ax_pre.imshow(ax_pre.volume[:,ax_pre.index,:], cmap='gray', norm=clr.NoNorm())
+    ax_pre.set_title('Prediction')
     fig.canvas.mpl_connect('key_press_event', process_key)
     plt.show()
 
@@ -44,7 +47,9 @@ def patch_viewer(patch):
     ax_img.index = ax_img.volume.shape[1] // 2
     ax_seg.index = ax_seg.volume.shape[1] // 2
     ax_img.imshow(ax_img.volume[:,ax_img.index,:], cmap='gray')
+    ax_img.set_title('MRI Scan')
     ax_seg.imshow(ax_seg.volume[:,ax_seg.index,:], cmap='gray', norm=clr.NoNorm())
+    ax_seg.set_title('Ground Truth')
     fig.canvas.mpl_connect('key_press_event', process_key)
     plt.show()
 
