@@ -76,7 +76,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         if sys.argv[1] == "patch":
             raise Exception("Need the path to the patch file")
-        else if sys.argv[1] == "full":
+        elif sys.argv[1] == "full":
             raise Exception("Need the path to the directory containing images")
 
     if sys.argv[1] == "patch":
@@ -85,8 +85,8 @@ if __name__ == '__main__':
         patch[...,1][patch[...,1]>0.5] = 0.9
         patch_viewer( patch )
 
-    else if sys.argv[1] == "full":
-        image_path = sys.argv[1]
+    elif sys.argv[1] == "full":
+        image_path = sys.argv[2]
         pred_path = os.path.join( image_path, 'preds_processed.npy')
 
         image = read_image( image_path )
