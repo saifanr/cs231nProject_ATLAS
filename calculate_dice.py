@@ -37,5 +37,5 @@ if __name__ == '__main__':
         f.write( str(path) + '\t' +  str(dice) +'\n' )
 
     print( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() ) )
-    f.write( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() )+ '\n' )
+    f.write( 'The overall dice score is ' + '\t' + str( np.asarray(dices).mean() ) + '\n' )
     f.close()
